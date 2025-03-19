@@ -1,10 +1,11 @@
-import streamlit as st
+import streamlit as st 
 import pandas as pd
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.metrics.pairwise import cosine_similarity
-from scipy.spatial.distance import euclidean
+from scipy.spatial.distance import euclidean, hamming
+from scipy.stats import pearsonr
 from sklearn.preprocessing import StandardScaler
 from sklearn.feature_extraction.text import TfidfVectorizer
 
@@ -18,15 +19,15 @@ data = {
 }
 df = pd.DataFrame(data).set_index("User")
 
-# Normalize the ratings
+
 scaler = StandardScaler()
 normalized_ratings = scaler.fit_transform(df)
 
-# Compute Cosine Similarity
+
 cosine_sim = cosine_similarity(normalized_ratings)
 cosine_df = pd.DataFrame(cosine_sim, index=df.index, columns=df.index)
 
-# Compute Euclidean Distance
+
 def euclidean_similarity(matrix):
     n = matrix.shape[0]
     dist_matrix = np.zeros((n, n))
@@ -37,7 +38,29 @@ def euclidean_similarity(matrix):
 
 euclidean_df = euclidean_similarity(normalized_ratings)
 
-# Content-based Filtering (TF-IDF on Movie Descriptions)
+
+def pearson_similarity(matrix):
+    n = matrix.shape[0]
+    corr_matrix = np.zeros((n, n))
+    for i in range(n):
+        for j in range(n):
+            corr_matrix[i][j], _ = pearsonr(matrix[i], matrix[j])
+    return pd.DataFrame(corr_matrix, index=df.index, columns=df.index)
+
+pearson_df = pearson_similarity(normalized_ratings)
+
+
+def hamming_similarity(matrix):
+    n = matrix.shape[0]
+    dist_matrix = np.zeros((n, n))
+    for i in range(n):
+        for j in range(n):
+            dist_matrix[i][j] = hamming(matrix[i], matrix[j])
+    return pd.DataFrame(dist_matrix, index=df.index, columns=df.index)
+
+hamming_df = hamming_similarity(normalized_ratings)
+
+
 movies = {
     "Movie1": "Action Adventure",
     "Movie2": "Romance Drama",
@@ -49,8 +72,8 @@ tfidf_matrix = vectorizer.fit_transform(movies.values())
 cosine_movie_sim = cosine_similarity(tfidf_matrix)
 movie_sim_df = pd.DataFrame(cosine_movie_sim, index=movies.keys(), columns=movies.keys())
 
-# Streamlit App UI
-st.title("Behind the Scene tools used in RS")
+
+st.title("Behind the scenes of an Recommendation System Model")
 
 
 # Show User-User Cosine Similarity
@@ -59,6 +82,7 @@ st.dataframe(cosine_df)
 fig, ax = plt.subplots()
 sns.heatmap(cosine_df, annot=True, cmap='coolwarm', fmt='.2f', ax=ax)
 st.pyplot(fig)
+st.write("**Explanation:** Cosine similarity measures the angle between two vectors. Higher values mean users are more similar.")
 
 # Show User-User Euclidean Distance
 st.subheader("User Similarity (Euclidean Distance)")
@@ -66,6 +90,23 @@ st.dataframe(euclidean_df)
 fig, ax = plt.subplots()
 sns.heatmap(euclidean_df, annot=True, cmap='coolwarm', fmt='.2f', ax=ax)
 st.pyplot(fig)
+st.write("**Explanation:** Euclidean distance measures the straight-line distance between users' rating vectors. Lower values mean more similarity.")
+
+# Show User-User Pearson Correlation
+st.subheader("User Similarity (Pearson Correlation)")
+st.dataframe(pearson_df)
+fig, ax = plt.subplots()
+sns.heatmap(pearson_df, annot=True, cmap='coolwarm', fmt='.2f', ax=ax)
+st.pyplot(fig)
+st.write("**Explanation:** Pearson correlation measures the linear relationship between users' ratings. Higher values indicate stronger correlation.")
+
+# Show User-User Hamming Distance
+st.subheader("User Similarity (Hamming Distance)")
+st.dataframe(hamming_df)
+fig, ax = plt.subplots()
+sns.heatmap(hamming_df, annot=True, cmap='coolwarm', fmt='.2f', ax=ax)
+st.pyplot(fig)
+st.write("**Explanation:** Hamming distance counts the number of differences between users' rating patterns. Lower values mean users are more similar.")
 
 # Show Movie Similarity (Content-based Filtering)
 st.subheader("Movie Similarity (Cosine Similarity on Content)")
@@ -73,6 +114,7 @@ st.dataframe(movie_sim_df)
 fig, ax = plt.subplots()
 sns.heatmap(movie_sim_df, annot=True, cmap='coolwarm', fmt='.2f', ax=ax)
 st.pyplot(fig)
+st.write("**Explanation:** Cosine similarity on TF-IDF vectors determines content similarity between movies.")
 
 # User Input for Recommendation
 selected_user = st.selectbox("Select a user to recommend movies for:", df.index)
