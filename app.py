@@ -50,7 +50,7 @@ cosine_movie_sim = cosine_similarity(tfidf_matrix)
 movie_sim_df = pd.DataFrame(cosine_movie_sim, index=movies.keys(), columns=movies.keys())
 
 # Streamlit App UI
-st.title("Hidden tools used in Recommendation System i.e Distance Metrics")
+st.title("Behind the Scene tools used in RS")
 
 
 # Show User-User Cosine Similarity
